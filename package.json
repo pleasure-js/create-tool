@@ -1,0 +1,32 @@
+{
+  "name": "pleasure-create-tool",
+  "version": "1.0.0-beta",
+  "description": "tool to clone & render pleasure project given git repos as templates",
+  "main": "dist/pleasure-create-tool.js",
+  "module": "dist/pleasure-create-tool.esm.js",
+  "author": "Martin Rafael Gonzalez <tin@devtin.io>",
+  "license": "MIT",
+  "scripts": {
+    "build": "rollup -c",
+    "test": "NODE_ENV=test ava --verbose --serial"
+  },
+  "devDependencies": {
+    "ava": "^1.4.1",
+    "rollup": "^1.12.4",
+    "rollup-plugin-alias": "^1.5.1",
+    "rollup-plugin-babel-minify": "^8.0.0",
+    "rollup-plugin-commonjs": "^10.0.0",
+    "rollup-plugin-json": "^4.0.0",
+    "rollup-plugin-node-resolve": "^5.0.0"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.5",
+    "deepmerge": "^3.2.0",
+    "fs-extra": "^8.0.1",
+    "handlebars": "^4.1.2",
+    "lodash": "^4.17.11",
+    "md5": "^2.2.1",
+    "nodegit": "^0.24.3",
+    "pleasure-utils": "keepwondering/pleasure-utils"
+  }
+}
