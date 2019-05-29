@@ -4,6 +4,7 @@ import { getConfig, removeConfig } from './get-config.js'
 import { loadPreset } from './load-preset.js'
 import { savePreset } from './save-preset.js'
 import pick from 'lodash/pick'
+import merge from 'deepmerge'
 import md5 from 'md5'
 
 /**
@@ -11,16 +12,18 @@ import md5 from 'md5'
  * and optionally loads a file
  * @param {String} srcRepo - The git repository (local path or URL)
  * @param {String} destination - Local destination of the repo
+ * @param {Object} [addData] - Optional data to use in rendering the templates.
  * @return {Promise}
  */
-export async function create (srcRepo, destination) {
+export async function create (srcRepo, destination, addData = {}) {
   await cloneRepoAndClean(srcRepo, destination)
 
   const repo = await getConfig(destination)
-  const enteredData = await render(destination, await loadPreset(destination, md5(srcRepo)))
+  const enteredData = await render(destination, merge(await loadPreset(destination, md5(srcRepo)), addData))
 
   if (repo.savePreset) {
-    await savePreset(md5(srcRepo), Array.isArray(repo.savePreset) ? pick(enteredData, repo.savePreset) : enteredData)
+    const compiledData = Array.isArray(repo.savePreset) ? pick(enteredData, repo.savePreset) : enteredData
+    await savePreset(md5(srcRepo), merge(compiledData, addData))
   }
 
   await removeConfig(destination)

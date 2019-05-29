@@ -16,6 +16,7 @@ var fs = _interopDefault(require('fs'));
 var Promise = _interopDefault(require('bluebird'));
 var handlerbars = _interopDefault(require('handlebars'));
 var pick = _interopDefault(require('lodash/pick'));
+var merge = _interopDefault(require('deepmerge'));
 var md5 = _interopDefault(require('md5'));
 
 async function cloneRepoAndClean (src, dst) {
@@ -108,7 +109,7 @@ async function render (dir, defaultValues = {}) {
 
   const files = await pleasureUtils.deepScanDir(dir, { only: [/\.hbs$/] });
 
-  if (config.savePreset) {
+  if (config.savePreset && prompts) {
     prompts = prompts(dir).map((q) => {
       if (!defaultValues.hasOwnProperty(q.name)) {
         return q
@@ -140,7 +141,7 @@ async function render (dir, defaultValues = {}) {
   return data
 }
 
-const presetDir = path.resolve(__dirname, '.presets');
+const presetDir = path.resolve(__dirname, '../.presets');
 
 async function loadPreset (srcRepo, hash) {
   const { savePreset } = await getConfig(srcRepo);
@@ -166,16 +167,18 @@ async function savePreset (id, data) {
  * and optionally loads a file
  * @param {String} srcRepo - The git repository (local path or URL)
  * @param {String} destination - Local destination of the repo
+ * @param {Object} [addData] - Optional data to use in rendering the templates.
  * @return {Promise}
  */
-async function create (srcRepo, destination) {
+async function create (srcRepo, destination, addData = {}) {
   await cloneRepoAndClean(srcRepo, destination);
 
   const repo = await getConfig(destination);
-  const enteredData = await render(destination, await loadPreset(destination, md5(srcRepo)));
+  const enteredData = await render(destination, merge(await loadPreset(destination, md5(srcRepo)), addData));
 
   if (repo.savePreset) {
-    await savePreset(md5(srcRepo), Array.isArray(repo.savePreset) ? pick(enteredData, repo.savePreset) : enteredData);
+    const compiledData = Array.isArray(repo.savePreset) ? pick(enteredData, repo.savePreset) : enteredData;
+    await savePreset(md5(srcRepo), merge(compiledData, addData));
   }
 
   await removeConfig(destination);

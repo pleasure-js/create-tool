@@ -1,5 +1,7 @@
 import { deepScanDir } from 'pleasure-utils'
 import { pathExists, remove, mkdirp } from 'fs-extra'
+import fse from 'fs-extra'
+import _ from 'lodash'
 import util from 'util'
 import { prompt } from 'inquirer'
 import fs from 'fs'
@@ -15,7 +17,7 @@ const writeFile = util.promisify(fs.writeFile)
  *
  * @property {Function} transform - Called with the `data` that's gonna be used to parse all of the `.hbs` files.
  * @property {Object} prompts - [inquirer.prompt](https://github.com/SBoudrias/Inquirer.js/) options
- * @property {Object} config - Additional configuration options
+ * @property {Function} finished - Called once the operation is completed. Receives `{ dir, data, fse = 'fs-extra', _ = 'lodash' }`.
  * @property {Array|Boolean} [savePreset=true] - To save last default options introduced by the user. `true` for all,
  * `false` for none or and `String[]` of the values to save.
  */
@@ -37,20 +39,21 @@ export async function render (dir, defaultValues = {}) {
   let data = {}
   let transform
   let prompts
+  let finished
   let config = Object.assign({}, ParserPluginConfig)
 
   const PleasureParserPlugin = await getConfig(dir)
 
   if (PleasureParserPlugin) {
     const { config: addConfig } = PleasureParserPlugin;
-    ({ transform, prompts } = PleasureParserPlugin)
+    ({ transform, prompts, finished } = PleasureParserPlugin)
 
     Object.assign(config, addConfig)
   }
 
   const files = await deepScanDir(dir, { only: [/\.hbs$/] })
 
-  if (config.savePreset) {
+  if (config.savePreset && prompts) {
     prompts = prompts(dir).map((q) => {
       if (!defaultValues.hasOwnProperty(q.name)) {
         return q
@@ -78,6 +81,10 @@ export async function render (dir, defaultValues = {}) {
       await remove(src)
     }
   })
+
+  if (finished) {
+    await finished({ dir, data, fse, _ })
+  }
 
   return data
 }
