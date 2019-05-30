@@ -1,5 +1,5 @@
 import { deepScanDir } from 'pleasure-utils'
-import { pathExists, remove, mkdirp } from 'fs-extra'
+import { pathExists, remove, mkdirp, move } from 'fs-extra'
 import fse from 'fs-extra'
 import _ from 'lodash'
 import util from 'util'
@@ -8,6 +8,7 @@ import fs from 'fs'
 import Promise from 'bluebird'
 import handlerbars from 'handlebars'
 import { getConfig } from './get-config.js'
+import path from 'path'
 
 const readFile = util.promisify(fs.readFile)
 const writeFile = util.promisify(fs.writeFile)
@@ -30,7 +31,8 @@ const ParserPluginConfig = {
  * Loads (if any) the `ParserPlugin` file called `pleasure-create.config.js` located at the main `dir`, then removes it.
  * Prompts, using [inquirer](https://github.com/SBoudrias/Inquirer.js/) any requests found at the `ParserPlugin.prompts`.
  * Renders `.hbs` files found in give `dir` with collected data retrieved using the configuration of `ParserPlugin.prompts`
- * Renames all `.hbs` files removing the suffix `.hbs`.
+ * Renames all `.hbs` files removing the suffix `.hbs`. `.hbs` files starting with a `_` will be renamed removing the
+ * prefix underscore (`_`) and preserving it's `.hbs` extension.
  * @param {String} dir - Directory to render
  * @param {Object} [defaultValues] - Optional initial data object to parse the handlebars templates
  * @return {Promise<void>}
@@ -78,7 +80,11 @@ export async function render (dir, defaultValues = {}) {
     await writeFile(dst, parsed)
 
     if (dst !== src) {
-      await remove(src)
+      return remove(src)
+    }
+
+    if (/^_/.test(path.basename(src))) {
+      return move(dst, path.join(path.dirname(src), path.basename(src).replace(/^_/, '')))
     }
   })
 
