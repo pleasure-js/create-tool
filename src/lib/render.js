@@ -57,10 +57,9 @@ export async function render (dir, defaultValues = {}) {
 
   if (config.savePreset && prompts) {
     prompts = prompts(dir).map((q) => {
-      if (!defaultValues.hasOwnProperty(q.name)) {
-        return q
+      if (defaultValues.hasOwnProperty(q.name) && !q.default) {
+        q.default = defaultValues[q.name]
       }
-      q.default = defaultValues[q.name]
       return q
     })
   }
