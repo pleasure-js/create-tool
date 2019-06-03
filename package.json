@@ -27,6 +27,6 @@
     "lodash": "^4.17.11",
     "md5": "^2.2.1",
     "nodegit": "^0.24.3",
-    "pleasure-utils": "keepwondering/pleasure-utils"
+    "pleasure-utils": "keepwondering/pleasure-utils#v1-beta"
   }
 }
