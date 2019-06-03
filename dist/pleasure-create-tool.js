@@ -7,9 +7,11 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var fsExtra = require('fs-extra');
+var fse = require('fs-extra');
+var fse__default = _interopDefault(fse);
 var path = _interopDefault(require('path'));
 var pleasureUtils = require('pleasure-utils');
+var _ = _interopDefault(require('lodash'));
 var util = _interopDefault(require('util'));
 var inquirer = require('inquirer');
 var fs = _interopDefault(require('fs'));
@@ -22,7 +24,7 @@ var md5 = _interopDefault(require('md5'));
 async function cloneRepoAndClean (src, dst) {
   const { Clone } = require('nodegit');
   await Clone(src, dst);
-  await fsExtra.remove(path.join(dst, '.git'));
+  await fse.remove(path.join(dst, '.git'));
   return { src, dst }
 }
 
@@ -50,7 +52,7 @@ const ParserPluginConfig = {
  */
 async function getConfig (dir) {
   const pleasureCreateConfigFile = getConfigFile(dir);
-  if (await fsExtra.pathExists(pleasureCreateConfigFile)) {
+  if (await fse.pathExists(pleasureCreateConfigFile)) {
     const config = require(pleasureCreateConfigFile);
     return Object.assign({}, ParserPluginConfig, config)
   }
@@ -63,7 +65,7 @@ async function getConfig (dir) {
  * @return {Promise<any>}
  */
 async function removeConfig (dir) {
-  return fsExtra.remove(getConfigFile(dir))
+  return fse.remove(getConfigFile(dir))
 }
 
 const readFile = util.promisify(fs.readFile);
@@ -74,7 +76,7 @@ const writeFile = util.promisify(fs.writeFile);
  *
  * @property {Function} transform - Called with the `data` that's gonna be used to parse all of the `.hbs` files.
  * @property {Object} prompts - [inquirer.prompt](https://github.com/SBoudrias/Inquirer.js/) options
- * @property {Object} config - Additional configuration options
+ * @property {Function} finished - Called once the operation is completed. Receives `{ dir, data, fse = 'fs-extra', _ = 'lodash' }`.
  * @property {Array|Boolean} [savePreset=true] - To save last default options introduced by the user. `true` for all,
  * `false` for none or and `String[]` of the values to save.
  */
@@ -87,7 +89,8 @@ const ParserPluginConfig$1 = {
  * Loads (if any) the `ParserPlugin` file called `pleasure-create.config.js` located at the main `dir`, then removes it.
  * Prompts, using [inquirer](https://github.com/SBoudrias/Inquirer.js/) any requests found at the `ParserPlugin.prompts`.
  * Renders `.hbs` files found in give `dir` with collected data retrieved using the configuration of `ParserPlugin.prompts`
- * Renames all `.hbs` files removing the suffix `.hbs`.
+ * Renames all `.hbs` files removing the suffix `.hbs`. `.hbs` files starting with a `_` will be renamed removing the
+ * prefix underscore (`_`) and preserving it's `.hbs` extension.
  * @param {String} dir - Directory to render
  * @param {Object} [defaultValues] - Optional initial data object to parse the handlebars templates
  * @return {Promise<void>}
@@ -96,13 +99,14 @@ async function render (dir, defaultValues = {}) {
   let data = {};
   let transform;
   let prompts;
+  let finished;
   let config = Object.assign({}, ParserPluginConfig$1);
 
   const PleasureParserPlugin = await getConfig(dir);
 
   if (PleasureParserPlugin) {
     const { config: addConfig } = PleasureParserPlugin;
-    ({ transform, prompts } = PleasureParserPlugin);
+    ({ transform, prompts, finished } = PleasureParserPlugin);
 
     Object.assign(config, addConfig);
   }
@@ -111,10 +115,9 @@ async function render (dir, defaultValues = {}) {
 
   if (config.savePreset && prompts) {
     prompts = prompts(dir).map((q) => {
-      if (!defaultValues.hasOwnProperty(q.name)) {
-        return q
+      if (defaultValues.hasOwnProperty(q.name) && !q.default) {
+        q.default = defaultValues[q.name];
       }
-      q.default = defaultValues[q.name];
       return q
     });
   }
@@ -134,9 +137,17 @@ async function render (dir, defaultValues = {}) {
     await writeFile(dst, parsed);
 
     if (dst !== src) {
-      await fsExtra.remove(src);
+      return fse.remove(src)
+    }
+
+    if (/^_/.test(path.basename(src))) {
+      return fse.move(dst, path.join(path.dirname(src), path.basename(src).replace(/^_/, '')))
     }
   });
+
+  if (finished) {
+    await finished({ dir, data, fse: fse__default, _ });
+  }
 
   return data
 }
@@ -151,7 +162,7 @@ async function loadPreset (srcRepo, hash) {
   const presetFile = path.join(presetDir, `${ hash }.json`);
   let preset = {};
 
-  if (await fsExtra.pathExists(presetFile)) {
+  if (await fse.pathExists(presetFile)) {
     preset = require(presetFile);
   }
   return Array.isArray(savePreset) ? pick(preset, savePreset) : preset
@@ -159,7 +170,7 @@ async function loadPreset (srcRepo, hash) {
 
 async function savePreset (id, data) {
   const presetFile = path.join(presetDir, `${ id }.json`);
-  return fsExtra.outputFile(presetFile, JSON.stringify(data))
+  return fse.outputFile(presetFile, JSON.stringify(data))
 }
 
 /**
@@ -182,6 +193,8 @@ async function create (srcRepo, destination, addData = {}) {
   }
 
   await removeConfig(destination);
+
+  return enteredData
 }
 
 var index = {

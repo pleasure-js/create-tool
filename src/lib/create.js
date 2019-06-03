@@ -27,4 +27,6 @@ export async function create (srcRepo, destination, addData = {}) {
   }
 
   await removeConfig(destination)
+
+  return enteredData
 }

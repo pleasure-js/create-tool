@@ -3,9 +3,10 @@
  * (c) 2018-2019 Martin Rafael Gonzalez <tin@devtin.io>
  * MIT
  */
-import { remove, pathExists, outputFile } from 'fs-extra';
+import fse, { remove, pathExists, move, outputFile } from 'fs-extra';
 import path from 'path';
 import { deepScanDir } from 'pleasure-utils';
+import _ from 'lodash';
 import util from 'util';
 import { prompt } from 'inquirer';
 import fs from 'fs';
@@ -70,7 +71,7 @@ const writeFile = util.promisify(fs.writeFile);
  *
  * @property {Function} transform - Called with the `data` that's gonna be used to parse all of the `.hbs` files.
  * @property {Object} prompts - [inquirer.prompt](https://github.com/SBoudrias/Inquirer.js/) options
- * @property {Object} config - Additional configuration options
+ * @property {Function} finished - Called once the operation is completed. Receives `{ dir, data, fse = 'fs-extra', _ = 'lodash' }`.
  * @property {Array|Boolean} [savePreset=true] - To save last default options introduced by the user. `true` for all,
  * `false` for none or and `String[]` of the values to save.
  */
@@ -83,7 +84,8 @@ const ParserPluginConfig$1 = {
  * Loads (if any) the `ParserPlugin` file called `pleasure-create.config.js` located at the main `dir`, then removes it.
  * Prompts, using [inquirer](https://github.com/SBoudrias/Inquirer.js/) any requests found at the `ParserPlugin.prompts`.
  * Renders `.hbs` files found in give `dir` with collected data retrieved using the configuration of `ParserPlugin.prompts`
- * Renames all `.hbs` files removing the suffix `.hbs`.
+ * Renames all `.hbs` files removing the suffix `.hbs`. `.hbs` files starting with a `_` will be renamed removing the
+ * prefix underscore (`_`) and preserving it's `.hbs` extension.
  * @param {String} dir - Directory to render
  * @param {Object} [defaultValues] - Optional initial data object to parse the handlebars templates
  * @return {Promise<void>}
@@ -92,13 +94,14 @@ async function render (dir, defaultValues = {}) {
   let data = {};
   let transform;
   let prompts;
+  let finished;
   let config = Object.assign({}, ParserPluginConfig$1);
 
   const PleasureParserPlugin = await getConfig(dir);
 
   if (PleasureParserPlugin) {
     const { config: addConfig } = PleasureParserPlugin;
-    ({ transform, prompts } = PleasureParserPlugin);
+    ({ transform, prompts, finished } = PleasureParserPlugin);
 
     Object.assign(config, addConfig);
   }
@@ -107,10 +110,9 @@ async function render (dir, defaultValues = {}) {
 
   if (config.savePreset && prompts) {
     prompts = prompts(dir).map((q) => {
-      if (!defaultValues.hasOwnProperty(q.name)) {
-        return q
+      if (defaultValues.hasOwnProperty(q.name) && !q.default) {
+        q.default = defaultValues[q.name];
       }
-      q.default = defaultValues[q.name];
       return q
     });
   }
@@ -130,9 +132,17 @@ async function render (dir, defaultValues = {}) {
     await writeFile(dst, parsed);
 
     if (dst !== src) {
-      await remove(src);
+      return remove(src)
+    }
+
+    if (/^_/.test(path.basename(src))) {
+      return move(dst, path.join(path.dirname(src), path.basename(src).replace(/^_/, '')))
     }
   });
+
+  if (finished) {
+    await finished({ dir, data, fse, _ });
+  }
 
   return data
 }
@@ -178,6 +188,8 @@ async function create (srcRepo, destination, addData = {}) {
   }
 
   await removeConfig(destination);
+
+  return enteredData
 }
 
 var index = {
