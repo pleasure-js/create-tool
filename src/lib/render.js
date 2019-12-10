@@ -74,16 +74,17 @@ export async function render (dir, defaultValues = {}) {
 
   await Promise.each(files, async (src) => {
     const dst = src.replace(/\.hbs$/, '')
+
+    if (/^_/.test(path.basename(src))) {
+      return move(dst, path.join(path.dirname(src), path.basename(src).replace(/^_/, '')))
+    }
+
     const template = handlerbars.compile((await readFile(src)).toString())
     const parsed = template(data)
     await writeFile(dst, parsed)
 
     if (dst !== src) {
       return remove(src)
-    }
-
-    if (/^_/.test(path.basename(src))) {
-      return move(dst, path.join(path.dirname(src), path.basename(src).replace(/^_/, '')))
     }
   })
 
