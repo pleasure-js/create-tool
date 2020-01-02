@@ -1,6 +1,6 @@
 /*!
- * pleasure-create-tool v1.0.0-beta
- * (c) 2018-2019 Martin Rafael Gonzalez <tin@devtin.io>
+ * @pleasure-js/create-tool v1.0.0-beta
+ * (c) 2018-2020 Martin Rafael Gonzalez <tin@devtin.io>
  * MIT
  */
 'use strict';
@@ -10,7 +10,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var fse = require('fs-extra');
 var fse__default = _interopDefault(fse);
 var path = _interopDefault(require('path'));
-var pleasureUtils = require('pleasure-utils');
+var utils = require('@pleasure-js/utils');
 var _ = _interopDefault(require('lodash'));
 var util = _interopDefault(require('util'));
 var inquirer = require('inquirer');
@@ -50,6 +50,7 @@ const ParserPluginConfig = {
  * @param {String} dir - Directory from where to locate the file
  * @return {Promise<{ParserPlugin}>}
  */
+
 async function getConfig (dir) {
   const pleasureCreateConfigFile = getConfigFile(dir);
   if (await fse.pathExists(pleasureCreateConfigFile)) {
@@ -64,6 +65,7 @@ async function getConfig (dir) {
  * @param {String} dir - Directory from where to locate the file
  * @return {Promise<any>}
  */
+
 async function removeConfig (dir) {
   return fse.remove(getConfigFile(dir))
 }
@@ -111,7 +113,7 @@ async function render (dir, defaultValues = {}) {
     Object.assign(config, addConfig);
   }
 
-  const files = await pleasureUtils.deepScanDir(dir, { only: [/\.hbs$/] });
+  const files = await utils.deepScanDir(dir, { only: [/\.hbs$/] });
 
   if (config.savePreset && prompts) {
     prompts = prompts(dir).map((q) => {
@@ -131,7 +133,7 @@ async function render (dir, defaultValues = {}) {
   }
 
   await Promise.each(files, async (src) => {
-    const dst = src.replace(/\.hbs$/, '');
+    const dst = /^_/.test(path.basename(src)) ? src : src.replace(/\.hbs$/, '');
     const template = handlerbars.compile((await readFile(src)).toString());
     const parsed = template(data);
     await writeFile(dst, parsed);

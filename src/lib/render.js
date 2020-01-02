@@ -1,4 +1,4 @@
-import { deepScanDir } from 'pleasure-utils'
+import { deepScanDir } from '@pleasure-js/utils'
 import { pathExists, remove, mkdirp, move } from 'fs-extra'
 import fse from 'fs-extra'
 import _ from 'lodash'
@@ -73,18 +73,17 @@ export async function render (dir, defaultValues = {}) {
   }
 
   await Promise.each(files, async (src) => {
-    const dst = src.replace(/\.hbs$/, '')
-
-    if (/^_/.test(path.basename(src))) {
-      return move(dst, path.join(path.dirname(src), path.basename(src).replace(/^_/, '')))
-    }
-
+    const dst = /^_/.test(path.basename(src)) ? src : src.replace(/\.hbs$/, '')
     const template = handlerbars.compile((await readFile(src)).toString())
     const parsed = template(data)
     await writeFile(dst, parsed)
 
     if (dst !== src) {
       return remove(src)
+    }
+
+    if (/^_/.test(path.basename(src))) {
+      return move(dst, path.join(path.dirname(src), path.basename(src).replace(/^_/, '')))
     }
   })
 

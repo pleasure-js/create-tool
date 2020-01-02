@@ -1,11 +1,11 @@
 /*!
- * pleasure-create-tool v1.0.0-beta
- * (c) 2018-2019 Martin Rafael Gonzalez <tin@devtin.io>
+ * @pleasure-js/create-tool v1.0.0-beta
+ * (c) 2018-2020 Martin Rafael Gonzalez <tin@devtin.io>
  * MIT
  */
 import fse, { remove, pathExists, move, outputFile } from 'fs-extra';
 import path from 'path';
-import { deepScanDir } from 'pleasure-utils';
+import { deepScanDir } from '@pleasure-js/utils';
 import _ from 'lodash';
 import util from 'util';
 import { prompt } from 'inquirer';
@@ -45,6 +45,7 @@ const ParserPluginConfig = {
  * @param {String} dir - Directory from where to locate the file
  * @return {Promise<{ParserPlugin}>}
  */
+
 async function getConfig (dir) {
   const pleasureCreateConfigFile = getConfigFile(dir);
   if (await pathExists(pleasureCreateConfigFile)) {
@@ -59,6 +60,7 @@ async function getConfig (dir) {
  * @param {String} dir - Directory from where to locate the file
  * @return {Promise<any>}
  */
+
 async function removeConfig (dir) {
   return remove(getConfigFile(dir))
 }
@@ -126,7 +128,7 @@ async function render (dir, defaultValues = {}) {
   }
 
   await Promise.each(files, async (src) => {
-    const dst = src.replace(/\.hbs$/, '');
+    const dst = /^_/.test(path.basename(src)) ? src : src.replace(/\.hbs$/, '');
     const template = handlerbars.compile((await readFile(src)).toString());
     const parsed = template(data);
     await writeFile(dst, parsed);

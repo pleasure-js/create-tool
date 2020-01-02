@@ -23,6 +23,7 @@ const ParserPluginConfig = {
  * @param {String} dir - Directory from where to locate the file
  * @return {Promise<{ParserPlugin}>}
  */
+
 export async function getConfig (dir) {
   const pleasureCreateConfigFile = getConfigFile(dir)
   if (await pathExists(pleasureCreateConfigFile)) {
@@ -37,6 +38,7 @@ export async function getConfig (dir) {
  * @param {String} dir - Directory from where to locate the file
  * @return {Promise<any>}
  */
+
 export async function removeConfig (dir) {
   return removeFile(getConfigFile(dir))
 }
