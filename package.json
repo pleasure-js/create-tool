@@ -27,6 +27,6 @@
     "lodash": "^4.17.15",
     "md5": "^2.2.1",
     "nodegit": "^0.26.3",
-    "@pleasure-js/utils": "git@github.com:pleasure-js/utils.git#v1-beta"
+    "@pleasure-js/utils": "git+ssh://git@github.com:pleasure-js/utils.git#v1-beta"
   }
 }
